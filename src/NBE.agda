@@ -23,14 +23,18 @@ mutual
   
   -- Normal forms are terms which cannot be reduced further
   data Nf (Γ : Env) : Ty → Set where
-    abs  : ∀ {A B} →   Nf (Γ `, A) B → Nf Γ (A ⇒ B)
-    pair : ∀ {A B} →   Nf Γ A → Nf Γ B → Nf Γ (A * B)
-    -- ne+ doesn't make sense now, but will after base types are added
-    -- ne+  :             Ne Γ 𝟙 →  Nf Γ 𝟙
+    abs  : ∀ {A B}   → Nf (Γ `, A) B → Nf Γ (A ⇒ B)
+    pair : ∀ {A B}   → Nf Γ A → Nf Γ B → Nf Γ (A * B)
+    -- TODO description of these promoters
+    neb+ :             Ne Γ 𝔹 →  Nf Γ 𝔹
+    nef+ :  ∀ {A}    → Ne Γ (𝔽 A) →  Nf Γ (𝔽 A)
     unit :             Nf Γ 𝟙
-    inl  : ∀ {A B} →   Nf Γ A → Nf Γ (A + B)
-    inr  : ∀ {A B} →   Nf Γ B → Nf Γ (A + B)
+    inl  : ∀ {A B}   → Nf Γ A → Nf Γ (A + B)
+    inr  : ∀ {A B}   → Nf Γ B → Nf Γ (A + B)
     case : ∀ {A B C} → Ne Γ (A + B) → Nf (Γ `, A) C → Nf (Γ `, B) C → Nf Γ C
+    -- TODO does this break the subformula property?
+    -- doesn't it depend on the definition of subformulas of (𝔽 A)?
+    fix  : ∀ {A}     → Nf Γ (A ⇒ A) → Nf Γ (𝔽 A)
     
   {-
     A note on `case` being in Nf:
@@ -58,11 +62,13 @@ mutual
   nfₑ : ∀ {Γ Δ A} → Δ ≤ Γ → Nf Γ A  → Nf Δ A
   nfₑ e (abs n)      = abs (nfₑ (lift e) n)
   nfₑ e (pair p q)   = pair (nfₑ e p) (nfₑ e q)
-  -- nfₑ e (ne+ x)      =  {!!}
   nfₑ e unit         = unit
   nfₑ e (inl x)      = inl (nfₑ e x)
   nfₑ e (inr x)      = inr (nfₑ e x)
   nfₑ e (case x p q) = case (neₑ e x) (nfₑ (lift e) p) (nfₑ (lift e) q)
+  nfₑ e (neb+ x)     = neb+ (neₑ e x)
+  nfₑ e (nef+ x)     = nef+ (neₑ e x)
+  nfₑ e (fix x)      = fix (nfₑ e x) 
 
   -- weaken a neutral form
   neₑ : ∀ {Γ Δ A} → Δ ≤ Γ → Ne Γ A  → Ne Δ A
@@ -70,6 +76,7 @@ mutual
   neₑ e (app n x) = app (neₑ e n) (nfₑ e x)
   neₑ e (fst x)   = fst (neₑ e x)
   neₑ e (snd x)   = snd (neₑ e x)
+  
 
 open import Data.Unit using (tt)
 open import Data.Product using (_×_ ; _,_ ; proj₁ ; proj₂)
@@ -134,10 +141,12 @@ open CoverMonad
 module PresheafSemantics where
 
   ⟦_⟧ : Ty → 𝒫
-  ⟦ 𝟙 ⟧     = 𝟙'
+  ⟦   𝟙   ⟧ = 𝟙'
   ⟦ A ⇒ B ⟧ = ⟦ A ⟧ ⇒' ⟦ B ⟧
   ⟦ A * B ⟧ = ⟦ A ⟧ ×' ⟦ B ⟧
   ⟦ A + B ⟧ = Cover' (⟦ A ⟧ +' ⟦ B ⟧)
+  ⟦   𝔹   ⟧ = Nf' 𝔹
+  ⟦  𝔽 A  ⟧ = Nf' (𝔽 A)
 
   ⟦_⟧ₑ : Env → 𝒫
   ⟦ [] ⟧ₑ = 𝟙'
@@ -168,15 +177,19 @@ module CoverOps where
       (λ δ g → g id (⟦ A ⟧ .ℱ δ a))
       f')
   unCover {A * B} c = unCover {A} (liftC proj₁ c) , unCover {B} (liftC proj₂ c)
-  unCover {A + B} c = joinC c   
+  unCover {A + B} c = joinC c
+  unCover {𝔹}     c = unCoverNf c
+  unCover {𝔽 A}   c = unCoverNf c
 
 open CoverOps
-
+ 
 -----  THE MEAT!
 
 mutual
   reflect :  ∀ {A : Ty} → Ne' A →̇ ⟦ A ⟧
-  reflect {𝟙} _      = tt
+  reflect {𝟙} _     = tt
+  reflect {𝔹} b     = neb+ b
+  reflect {𝔽 A} f   = nef+ f
   reflect {A ⇒ B} f = λ τ →
     let f' = (ℱ (Ne' (A ⇒ B)) τ f)
     in λ x → reflect (app f' (reify x))
@@ -187,10 +200,12 @@ mutual
       (retC (inj₂ (reflect {B} (var zero))))
 
   reify :  ∀ {A : Ty} → ⟦ A ⟧ →̇  Nf' A
-  reify {𝟙} tt          = unit
-  reify {A ⇒ B} f       = abs (reify (f (weak id) (reflect {A} (var zero))))
-  reify {A * B} (P , Q) = pair (reify P) (reify Q)
-  reify {A + B} t       = unCoverNf (liftC reifyOr t)
+  reify {𝟙} tt           = unit
+  reify {𝔹} a            = a
+  reify {𝔽 A} f          = f
+  reify {A ⇒ B} f        = abs (reify (f (weak id) (reflect {A} (var zero))))
+  reify {A * B} (P , Q)  = pair (reify P) (reify Q)
+  reify {A + B} t        = unCoverNf (liftC reifyOr t)
     where
       reifyOr : ∀ {A B} → (⟦ A ⟧ +' ⟦ B ⟧) →̇ Nf' (A + B)
       reifyOr (inj₁ x) = inl (reify x)
@@ -204,7 +219,8 @@ lookup (succ v) (Γ , _) = lookup v Γ
 
 -- interpret a Tm in the meta theory (in Set)
 -- i.e., denotational semantics for (possibly open) Tms
-eval : ∀ {A Γ} → Tm Γ A → ⟦ Γ ⟧ₑ →̇ ⟦ A ⟧ 
+eval : ∀ {A Γ} → Tm Γ A → ⟦ Γ ⟧ₑ →̇ ⟦ A ⟧
+eval {𝔽 A} (fix f) γ   = fix (reify {A ⇒ A} (eval f γ))
 eval (var x) γ         = lookup x γ
 eval {_} {Γ} (abs f) γ = λ τ x → eval f (⟦ Γ ⟧ₑ .ℱ τ γ , x)
 eval (app f x) γ       = eval f γ id (eval x γ)

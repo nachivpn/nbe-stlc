@@ -2,7 +2,6 @@ module Lambda where
 
 open import Type
 
--- Lambda calculus with co-products
 
 infixl 5 _,_
 data Env : Set where
@@ -14,7 +13,7 @@ data Var : Env → Ty → Set where
   succ : ∀{Γ A B} → Var Γ A → Var (Γ , B) A
 
 data Tm (Γ : Env) : Ty → Set where
-  var  : ∀ {A} → Var Γ A -> Tm Γ A
+  var  : ∀ {A} → Var Γ A → Tm Γ A
   
   abs  : ∀ {A B}
     → Tm (Γ , A) B
@@ -57,3 +56,8 @@ data Tm (Γ : Env) : Ty → Set where
        → Tm Γ (A + B) → Tm (Γ , A) C → Tm (Γ , B) C
        --------------------------------------------
        → Tm Γ C
+
+  fix  : ∀ {A}
+       → Tm Γ (A ⇒ A)
+       → Tm Γ (𝔽 A)
+
