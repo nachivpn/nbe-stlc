@@ -1,5 +1,7 @@
 module Type where
 
+infixl 5 _+_
+
 data Ty : Set where
 
   -- unit/terminal type
@@ -13,7 +15,8 @@ data Ty : Set where
   -- 𝔹ase type
   𝔹    :              Ty
   
-  -- "𝔽ix point type"
-  𝔽    : (a   : Ty) → Ty -- semantically, 𝔽 f = f (𝔽 f)
-
+  -- "𝔽ixed point" type
+  -- A term of type (𝔽 a) is a recursive computation
+  -- of a value of type a
+  𝔽    : (a   : Ty) → Ty
 

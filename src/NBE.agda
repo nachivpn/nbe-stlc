@@ -34,7 +34,7 @@ mutual
     case : ∀ {A B C} → Ne Γ (A + B) → Nf (Γ `, A) C → Nf (Γ `, B) C → Nf Γ C
     -- TODO does this break the subformula property?
     -- doesn't it depend on the definition of subformulas of (𝔽 A)?
-    fix  : ∀ {A}     → Nf Γ (A ⇒ A) → Nf Γ (𝔽 A)
+    fix  : ∀ {A B}   → Nf Γ ((A ⇒ B) ⇒ (A ⇒ B)) → Nf Γ A → Nf Γ (𝔽 B)
     
   {-
     A note on `case` being in Nf:
@@ -68,7 +68,7 @@ mutual
   nfₑ e (case x p q) = case (neₑ e x) (nfₑ (lift e) p) (nfₑ (lift e) q)
   nfₑ e (neb+ x)     = neb+ (neₑ e x)
   nfₑ e (nef+ x)     = nef+ (neₑ e x)
-  nfₑ e (fix x)      = fix (nfₑ e x) 
+  nfₑ e (fix f x)    = fix (nfₑ e f) (nfₑ e x)
 
   -- weaken a neutral form
   neₑ : ∀ {Γ Δ A} → Δ ≤ Γ → Ne Γ A  → Ne Δ A
@@ -220,7 +220,6 @@ lookup (succ v) (Γ , _) = lookup v Γ
 -- interpret a Tm in the meta theory (in Set)
 -- i.e., denotational semantics for (possibly open) Tms
 eval : ∀ {A Γ} → Tm Γ A → ⟦ Γ ⟧ₑ →̇ ⟦ A ⟧
-eval {𝔽 A} (fix f) γ   = fix (reify {A ⇒ A} (eval f γ))
 eval (var x) γ         = lookup x γ
 eval {_} {Γ} (abs f) γ = λ τ x → eval f (⟦ Γ ⟧ₑ .ℱ τ γ , x)
 eval (app f x) γ       = eval f γ id (eval x γ)
@@ -236,7 +235,10 @@ eval {C} {Γ} (case {A} {B} x p q) {Δ} γ =
     match : 𝒪 ((⟦ A ⟧ +' ⟦ B ⟧) ⇒' ⟦ C ⟧) Δ
     match τ (inj₁ x) = eval p (⟦ Γ ⟧ₑ .ℱ τ γ , x)
     match τ (inj₂ y) = eval q (⟦ Γ ⟧ₑ .ℱ τ γ , y)
-
+eval {𝔽 B} (fix {A} f b) γ =
+  fix (reify {(A ⇒ B) ⇒ (A ⇒ B)} (eval f γ))
+      (reify (eval b γ))
+      
 -- semantics of the identity environment
 reflect_env : ∀ (Γ : Env) → ⟦ Γ ⟧ₑ .𝒪 Γ
 reflect_env []       = tt

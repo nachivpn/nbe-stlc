@@ -41,7 +41,7 @@ tmₑ e (snd t)        = snd (tmₑ e t)
 tmₑ e (inl t)        = inl (tmₑ e t)
 tmₑ e (inr t)        = inr (tmₑ e t)
 tmₑ e (case x f g)   = case (tmₑ e x) (tmₑ (lift e) f) (tmₑ (lift e) g)
-tmₑ e (fix f)        = fix (tmₑ e f)
+tmₑ e (fix f a)      = fix (tmₑ e f) (tmₑ e a)
 
 module _ where
 
