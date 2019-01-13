@@ -14,9 +14,3 @@ data Ty : Set where
 
   -- 𝔹ase type
   𝔹    :              Ty
-  
-  -- "𝔽ixed point" type
-  -- A term of type (𝔽 a) is a recursive computation
-  -- of a value of type a
-  𝔽    : (a   : Ty) → Ty
-

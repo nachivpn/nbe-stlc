@@ -27,14 +27,10 @@ mutual
     pair : ∀ {A B}   → Nf Γ A → Nf Γ B → Nf Γ (A * B)
     -- TODO description of these promoters
     neb+ :             Ne Γ 𝔹 →  Nf Γ 𝔹
-    nef+ :  ∀ {A}    → Ne Γ (𝔽 A) →  Nf Γ (𝔽 A)
     unit :             Nf Γ 𝟙
     inl  : ∀ {A B}   → Nf Γ A → Nf Γ (A + B)
     inr  : ∀ {A B}   → Nf Γ B → Nf Γ (A + B)
     case : ∀ {A B C} → Ne Γ (A + B) → Nf (Γ `, A) C → Nf (Γ `, B) C → Nf Γ C
-    -- TODO does this break the subformula property?
-    -- doesn't it depend on the definition of subformulas of (𝔽 A)?
-    fix  : ∀ {A B}   → Nf Γ ((A ⇒ B) ⇒ (A ⇒ B)) → Nf Γ A → Nf Γ (𝔽 B)
     
   {-
     A note on `case` being in Nf:
@@ -67,8 +63,6 @@ mutual
   nfₑ e (inr x)      = inr (nfₑ e x)
   nfₑ e (case x p q) = case (neₑ e x) (nfₑ (lift e) p) (nfₑ (lift e) q)
   nfₑ e (neb+ x)     = neb+ (neₑ e x)
-  nfₑ e (nef+ x)     = nef+ (neₑ e x)
-  nfₑ e (fix f x)    = fix (nfₑ e f) (nfₑ e x)
 
   -- weaken a neutral form
   neₑ : ∀ {Γ Δ A} → Δ ≤ Γ → Ne Γ A  → Ne Δ A
@@ -146,7 +140,6 @@ module PresheafSemantics where
   ⟦ A * B ⟧ = ⟦ A ⟧ ×' ⟦ B ⟧
   ⟦ A + B ⟧ = Cover' (⟦ A ⟧ +' ⟦ B ⟧)
   ⟦   𝔹   ⟧ = Nf' 𝔹
-  ⟦  𝔽 A  ⟧ = Nf' (𝔽 A)
 
   ⟦_⟧ₑ : Env → 𝒫
   ⟦ [] ⟧ₑ = 𝟙'
@@ -179,7 +172,6 @@ module CoverOps where
   unCover {A * B} c = unCover {A} (liftC proj₁ c) , unCover {B} (liftC proj₂ c)
   unCover {A + B} c = joinC c
   unCover {𝔹}     c = unCoverNf c
-  unCover {𝔽 A}   c = unCoverNf c
 
 open CoverOps
  
@@ -189,7 +181,6 @@ mutual
   reflect :  ∀ {A : Ty} → Ne' A →̇ ⟦ A ⟧
   reflect {𝟙} _     = tt
   reflect {𝔹} b     = neb+ b
-  reflect {𝔽 A} f   = nef+ f
   reflect {A ⇒ B} f = λ τ →
     let f' = (ℱ (Ne' (A ⇒ B)) τ f)
     in λ x → reflect (app f' (reify x))
@@ -202,7 +193,6 @@ mutual
   reify :  ∀ {A : Ty} → ⟦ A ⟧ →̇  Nf' A
   reify {𝟙} tt           = unit
   reify {𝔹} a            = a
-  reify {𝔽 A} f          = f
   reify {A ⇒ B} f        = abs (reify (f (weak id) (reflect {A} (var zero))))
   reify {A * B} (P , Q)  = pair (reify P) (reify Q)
   reify {A + B} t        = unCoverNf (liftC reifyOr t)
@@ -235,9 +225,6 @@ eval {C} {Γ} (case {A} {B} x p q) {Δ} γ =
     match : 𝒪 ((⟦ A ⟧ +' ⟦ B ⟧) ⇒' ⟦ C ⟧) Δ
     match τ (inj₁ x) = eval p (⟦ Γ ⟧ₑ .ℱ τ γ , x)
     match τ (inj₂ y) = eval q (⟦ Γ ⟧ₑ .ℱ τ γ , y)
-eval {𝔽 B} (fix {A} f b) γ =
-  fix (reify {(A ⇒ B) ⇒ (A ⇒ B)} (eval f γ))
-      (reify (eval b γ))
       
 -- semantics of the identity environment
 reflect_env : ∀ (Γ : Env) → ⟦ Γ ⟧ₑ .𝒪 Γ

@@ -56,25 +56,3 @@ data Tm (Γ : Env) : Ty → Set where
        → Tm Γ (A + B) → Tm (Γ , A) C → Tm (Γ , B) C
        --------------------------------------------
        → Tm Γ C
-
-  -- a restricted fixed point combinator
-  fix  : ∀ {A B}
-       → Tm Γ ((A ⇒ B) ⇒ (A ⇒ B))
-       → Tm Γ A
-       → Tm Γ (𝔽 B)
-  {-
-    A note on `fix`:
-    - fix constructs a value of type (𝔽 B), but there is no way 
-      to eliminate (F 𝔹) to a 𝔹! This means that a fix application can 
-      be passed around, but it's value cannot be read.
-    - inspite of this restriction, fix is useful because, for example, 
-      we can now write a non-terminating main function using fix. 
-      We could also write terminating recursive functions using fix and float
-      the value to the top (main function) without inspecting it.
-    - this restriction (𝔽 type tag on the result of fix) is necessary for 
-      NBE to distinguish a fix point application from a normal application. 
-      This is because NBE cannot produce a term of type ⟦ 𝔹 ⟧ without 
-      actually evaluating fix---in which case normalization 
-      may not terminate!
-  -}
-
