@@ -116,19 +116,34 @@ module CoverMonad where
     caseC ((Ne' _) .ℱ e x)
       (coverₑ (lift e) p)
       (coverₑ (lift e) q)
-  
+
+  -- Cover' is an endofunctor on category of presheaves (construction and properties below)
+    
+  -- object map of Cover'
   Cover' : (A : 𝒫) → 𝒫
   Cover' A .𝒪 Γ = Cover Γ A
   Cover' A .ℱ   = coverₑ
-
-  liftC : ∀ {A B : 𝒫} → (A →̇ B) → Cover' A →̇ Cover' B
+  
+  -- morphism map of Cover'
+  liftC : ∀ {A B : 𝒫} → (A →̇ B) → (Cover' A →̇ Cover' B)
   liftC t (retC a) = retC (t a)
-  liftC t (caseC x p q) = caseC x (liftC t p) (liftC t q) 
+  liftC t (caseC x p q) = caseC x (liftC t p) (liftC t q)
 
+  -- Cover' is an "idempotent" functor
   joinC : ∀{A} → Cover' (Cover' A) →̇ Cover' A
   joinC (retC a) = a
   joinC (caseC x p q) = caseC x (joinC p) (joinC q)
 
+  -- joinC is an isomorphism
+  joinC⁻¹ : ∀{A} → Cover' A →̇ Cover' (Cover' A)
+  joinC⁻¹ = retC
+
+  -- a morphism from an exponential to an exponential of it's covered components
+  -- i.e., (b ^ a) →̇ (Cover' b) ^ (Cover' a)
+  expC :  ∀ {A B : 𝒫} → (A ⇒' B) →̇ (Cover' A ⇒' Cover' B)
+  expC f τ (retC a) = retC (f τ a)
+  expC f τ (caseC x c₁ c₂) = caseC x (expC f (weak τ) c₁) (expC f (weak τ) c₂)
+  
 open CoverMonad
 
 -- assign semantics to types and environments using presheafs
@@ -147,32 +162,31 @@ module PresheafSemantics where
   
 open PresheafSemantics
 
-module CoverOps where
 -- special cover operations
-
+module CoverOps where
+  
+  -- special case of liftExpC
   mapC : ∀ {A B Δ} → 𝒪 (A ⇒' B) Δ → Cover Δ A → Cover Δ B
-  mapC f (retC a)              = retC (f id a)
-  mapC {A} {B} f (caseC x p q) =
-    caseC x
-      (mapC ((A ⇒' B) .ℱ (weak id) f) p)
-      (mapC ((A ⇒' B) .ℱ (weak id) f) q)
+  mapC f c = expC f id c
 
+  -- cover preserves normal forms
   unCoverNf : ∀{A} → Cover' (Nf' A) →̇ Nf' A
   unCoverNf (retC a)       = a
   unCoverNf (caseC x p q) = case x (unCoverNf p) (unCoverNf q)
 
+  -- cover preserves preserves 
   unCover : ∀{A} → Cover' ⟦ A ⟧ →̇ ⟦ A ⟧
-  unCover {𝟙} c         = tt
-  unCover {A ⇒ B} f {Δ} = λ τ a →
-    let f' = (Cover' _) .ℱ τ f in
-      unCover {B}
-      (mapC
-      (λ δ g → g id (⟦ A ⟧ .ℱ δ a))
-      f')
-  unCover {A * B} c = unCover {A} (liftC proj₁ c) , unCover {B} (liftC proj₂ c)
-  unCover {A + B} c = joinC c
-  unCover {𝔹}     c = unCoverNf c
-
+  unCover {𝟙}     c         = tt
+  unCover {A * B} c         = unCover {A} (liftC proj₁ c) , unCover {B} (liftC proj₂ c)
+  unCover {A + B} c         = joinC c
+  unCover {𝔹}     c         = unCoverNf c
+  unCover {A ⇒ B} f {Δ} τ a = unCover {B} b'
+    where
+    f' : Cover Δ ⟦ A ⇒ B ⟧
+    f' = (Cover' _) .ℱ τ f
+    b' : Cover Δ ⟦ B ⟧
+    b' = mapC (λ δ g → (g id (⟦ A ⟧ .ℱ δ a))) f'
+  
 open CoverOps
  
 -----  THE MEAT!
