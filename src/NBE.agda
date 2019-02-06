@@ -165,16 +165,16 @@ open PresheafSemantics
 -- special cover operations
 module CoverOps where
   
-  -- special case of liftExpC
+  -- special case of expC
   mapC : ∀ {A B Δ} → 𝒪 (A ⇒' B) Δ → Cover Δ A → Cover Δ B
   mapC f c = expC f id c
 
-  -- cover preserves normal forms
+  -- uncover normnal forms
   unCoverNf : ∀{A} → Cover' (Nf' A) →̇ Nf' A
   unCoverNf (retC a)       = a
   unCoverNf (caseC x p q) = case x (unCoverNf p) (unCoverNf q)
 
-  -- cover preserves preserves 
+  -- uncover semantics 
   unCover : ∀{A} → Cover' ⟦ A ⟧ →̇ ⟦ A ⟧
   unCover {𝟙}     c         = tt
   unCover {A * B} c         = unCover {A} (liftC proj₁ c) , unCover {B} (liftC proj₂ c)
