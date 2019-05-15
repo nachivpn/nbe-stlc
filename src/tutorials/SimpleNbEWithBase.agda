@@ -33,7 +33,7 @@ mutual
     
   data Nf (Γ : Env) : Ty → Set where
     unit : Nf Γ 𝟙
-    ne+ : Ne Γ 𝕓 →  Nf Γ 𝕓
+    ne+  : Ne Γ 𝕓 →  Nf Γ 𝕓
     abs  : ∀ {A B} → Nf (Γ `, A) B → Nf Γ (A ⇒ B)
     pair : ∀ {A B} → Nf Γ A → Nf Γ B → Nf Γ (A * B)
 
@@ -58,7 +58,7 @@ Sem : (Γ : Env) → Ty →  Set
 Sem Γ 𝟙        = ⊤
 Sem Γ (t ⇒ t₁) = ∀ {Δ} → Δ ≤ Γ → Sem Δ t → Sem Δ t₁
 Sem Γ (t * t₁) = Sem Γ t × Sem Γ t₁
-Sem Γ 𝕓        = Nf Γ 𝕓 -- This require Sem to be indexed over Env
+Sem Γ 𝕓        = Ne Γ 𝕓 -- This require Sem to be indexed over Env
 
 -- semantics for env, indexed by an env (required for Sem)
 Semₑ : Env → Env → Set
@@ -89,7 +89,7 @@ module Weakenings where
 
   wkSem : ∀{a e e'} → e' ≤ e → Sem e a →  Sem e' a
   wkSem {𝟙} τ s            = tt
-  wkSem {𝕓} τ s            = wkNf τ s
+  wkSem {𝕓} τ s            = wkNe τ s
   wkSem {_ ⇒ _}  τ f τ' a  = f (τ ∙ τ') a
   wkSem {a * a₁} τ (p , q) = (wkSem τ p) , (wkSem τ q)
 
@@ -106,14 +106,14 @@ mutual
   reflect 𝟙       _ = tt
   reflect (A ⇒ B) t = λ τ a → reflect B (app (wkNe τ t) (reify a))
   reflect (A * B) t = reflect A (fst t), reflect B (snd t)
-  reflect 𝕓       t = ne+ t
+  reflect 𝕓       t = t
 
   -- reify semantics into normal forms
   reify :  ∀ {A Γ} → Sem Γ A → Nf Γ A
   reify {𝟙}     t  = unit
   reify {A ⇒ B} t  = abs (reify (t (weak id) (reflect A (var zero))))
   reify {A * B} t  = pair (reify (proj₁ t)) (reify (proj₂ t))
-  reify {𝕓}     t  = t
+  reify {𝕓}     t  = ne+ t
 
 -- evaluate a lambda term into semantics
 -- can be viewed as an interpreter
