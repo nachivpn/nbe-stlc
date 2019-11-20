@@ -13,4 +13,4 @@ data Ty : Set where
   _+_  : (a b : Ty) → Ty
 
   -- 𝔹ase type
-  𝔹    :              Ty
+  𝕓    :              Ty
