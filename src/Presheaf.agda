@@ -41,23 +41,24 @@ _→̇_ P Q = ∀ {Γ} → (P .F Γ → Q .F Γ)
 
 -- the unit presheaf
 𝟙' : 𝒫
-𝟙' = record { F = λ Γ → ⊤ ; fmap = λ τ _ → tt }
+𝟙' .F _      = ⊤
+𝟙' .fmap _ _ = tt
 
 -- presheaf product
 _×'_ : 𝒫 → 𝒫 → 𝒫
 (P ×' Q) .F Γ = P .F Γ × Q .F Γ
-(P ×' Q) .fmap τ = P .fmap τ ⊗ Q .fmap τ
+(P ×' Q) .fmap e = P .fmap e ⊗ Q .fmap e
 
 -- presheaf exponential
 _⇒'_ : 𝒫 → 𝒫 → 𝒫
 (P ⇒' Q) .F Γ      = ∀ {Δ} → Δ ≤ Γ → P .F Δ → Q .F Δ
-(P ⇒' Q) .fmap τ f τ' = f (τ ∙ τ')
+(P ⇒' Q) .fmap e f e' = f (e ∙ e')
 
 -- presheaf coproduct
 _+'_ : 𝒫 → 𝒫 → 𝒫
 (P +' Q) .F Γ          = P .F Γ ⊎ Q .F Γ
-(P +' Q) .fmap τ (inj₁ x) = inj₁ (P .fmap τ x)
-(P +' Q) .fmap τ (inj₂ y) = inj₂ (Q .fmap τ y)
+(P +' Q) .fmap e (inj₁ x) = inj₁ (P .fmap e x)
+(P +' Q) .fmap e (inj₂ y) = inj₂ (Q .fmap e y)
 
 module PresheafBCCC where
 
@@ -65,6 +66,6 @@ module PresheafBCCC where
   evalC (f , e) = (f id e)
 
   curry : ∀ {A B C : 𝒫} → ((A ×' B) →̇ C) → (A →̇ (B ⇒' C))
-  curry {A} f = λ a τ b → f (A .fmap τ a , b)
+  curry {A} f = λ a e b → f (A .fmap e a , b)
 
   -- TODO fst, snd, inl, inr AND laws!

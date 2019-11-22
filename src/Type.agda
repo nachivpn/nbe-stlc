@@ -2,6 +2,7 @@ module Type where
 
 infixl 5 _+_
 
+
 data Ty : Set where
 
   -- unit/terminal type
@@ -15,8 +16,8 @@ data Ty : Set where
   -- 𝔹ase type
   𝕓    :              Ty
 
-infixl 5 _,_
+infixl 5 _`,_
 
 data Ctx : Set where
-  [] : Ctx
-  _,_ : (Γ : Ctx) (a : Ty) → Ctx
+  []   : Ctx
+  _`,_ : (Γ : Ctx) (a : Ty) → Ctx
