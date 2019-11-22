@@ -2,8 +2,8 @@
 {-# OPTIONS --postfix-projections #-}
 module Presheaf where
 
-open import OPE
-open import Lambda using (Env)
+open import Thinning
+open import Type using (Ctx)
 open import Data.Unit using (⊤ ; tt)
 open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
 open import Data.Product using (_×_ ; _,_ ; proj₁ ; proj₂)
@@ -26,7 +26,7 @@ open Util
 record 𝒫 : Set₁ where
   field
     -- F is the object map of the presheaf over OPE
-    F : Env → Set
+    F : Ctx → Set
     -- fmap is the morphism map of the presheaf over OPE
     -- (also called the weakener / weakening)
     fmap : ∀ {Δ Γ} (τ : Γ ≤ Δ) → (F Δ → F Γ)

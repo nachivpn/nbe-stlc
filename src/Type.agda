@@ -14,3 +14,9 @@ data Ty : Set where
 
   -- 𝔹ase type
   𝕓    :              Ty
+
+infixl 5 _,_
+
+data Ctx : Set where
+  [] : Ctx
+  _,_ : (Γ : Ctx) (a : Ty) → Ctx

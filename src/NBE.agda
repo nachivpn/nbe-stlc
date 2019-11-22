@@ -4,15 +4,17 @@ open import Data.Unit using (tt)
 open import Data.Product using (_×_ ; _,_ ; proj₁ ; proj₂)
 open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
 
-open import Type
+open import Term
 open import Presheaf
+open import Thinning
+open import Type renaming (_,_ to _`,_)
 open 𝒫 renaming (F to In ; fmap to wk)
-open import Lambda renaming (_,_ to _`,_)
 
-variable
-  Γ Δ : Env
-  a b c : Ty
-  A B : 𝒫
+private
+  variable
+    a b c : Ty
+    Γ Δ : Ctx
+    A B : 𝒫
 
 mutual
 
@@ -25,14 +27,14 @@ mutual
     Neutral terms can be safely substituted for a variable
     without creating a possibility of further reduction.
   -}
-  data Ne (Γ : Env) : Ty → Set where
+  data Ne (Γ : Ctx) : Ty → Set where
     var : Var Γ a      → Ne Γ a
     app : Ne Γ (a ⇒ b) → Nf Γ a → Ne Γ b
     fst : Ne Γ (a * b) → Ne Γ a
     snd : Ne Γ (a * b) → Ne Γ b
 
   -- Normal forms are terms which cannot be reduced further
-  data Nf (Γ : Env) : Ty → Set where
+  data Nf (Γ : Ctx) : Ty → Set where
     abs  : Nf (Γ `, a) b → Nf Γ (a ⇒ b)
     pair : Nf Γ a → Nf Γ b → Nf Γ (a * b)
     -- TODO description of these promoters
@@ -60,8 +62,6 @@ mutual
       where and n₁,n₂,m₁,m₂ are distinct normal forms
       and ≈ is the βη-equivalence
   -}
-
-open import OPE
 
 -- variable embedding
 wkVar : Δ ≤ Γ → Var Γ a →  Var Δ a
@@ -131,7 +131,7 @@ open IndexedPresheafs
 
 module DecMonad where
 
-  data Dec (Γ : Env) (A : 𝒫) : Set where
+  data Dec (Γ : Ctx) (A : 𝒫) : Set where
     leaf  : (a : In A Γ) →  Dec Γ A
     branch : ∀{C D} → Ne Γ (C + D) → Dec (Γ `, C) A →  Dec (Γ `, D) A → Dec Γ A
 
@@ -180,7 +180,7 @@ module PresheafSemantics where
   ⟦ A + B ⟧ = Dec' (⟦ A ⟧ +' ⟦ B ⟧)
   ⟦   𝕓   ⟧ = Nf' 𝕓
 
-  ⟦_⟧ₑ : Env → 𝒫
+  ⟦_⟧ₑ : Ctx → 𝒫
   ⟦ [] ⟧ₑ = 𝟙'
   ⟦ e `, a ⟧ₑ = ⟦ e ⟧ₑ ×' ⟦ a ⟧
 
@@ -266,7 +266,7 @@ eval {Γ} {c} (case {a} {b} x p q) {Δ} γ =
     match τ (inj₂ y) = eval q (⟦ Γ ⟧ₑ .wk τ γ , y)
 
 -- semantics of the identity environment
-reflect_env : ∀ (Γ : Env) → ⟦ Γ ⟧ₑ .In Γ
+reflect_env : ∀ (Γ : Ctx) → ⟦ Γ ⟧ₑ .In Γ
 reflect_env []       = tt
 reflect_env (Γ `, a) =  env' , reflect {a} (var zero)
   where
@@ -280,6 +280,6 @@ reflect_env (Γ `, a) =  env' , reflect {a} (var zero)
 norm : Tm' a →̇ Nf' a
 norm {_} {Γ} t = reify (eval t (reflect_env Γ))
 
--- See, I told you! ' →̇ ' is just a way make (Γ : Env) implicit
+-- See, I told you! ' →̇ ' is just a way make (Γ : Ctx) implicit
 normalize : Tm Γ a → Nf Γ a
 normalize = norm
